@@ -92,12 +92,13 @@ class WineCommand:
         config: BottleConfig,
         command: str,
         terminal: bool = False,
-        arguments: str = False,
+        arguments: str = "",
         environment: dict = {},
         communicate: bool = False,
         cwd: Optional[str] = None,
         colors: str = "default",
         minimal: bool = False,  # avoid gamemode/gamescope usage
+        pre_script: Optional[str] = None,
         post_script: Optional[str] = None,
     ):
         _environment = environment.copy()
@@ -106,7 +107,7 @@ class WineCommand:
         self.arguments = arguments
         self.cwd = self._get_cwd(cwd)
         self.runner, self.runner_runtime = self._get_runner_info()
-        self.command = self.get_cmd(command, post_script, environment=_environment)
+        self.command = self.get_cmd(command, pre_script, post_script, environment=_environment)
         self.terminal = terminal
         self.env = self.get_env(_environment)
         self.communicate = communicate
@@ -467,13 +468,14 @@ class WineCommand:
         if arch == "win64":
             runner = f"{runner}64"
 
-        runner = runner.replace(" ", "\\ ")
+        runner = shlex.quote(runner)  # type: ignore
 
         return runner, runner_runtime
 
     def get_cmd(
         self,
         command,
+        pre_script: Optional[str] = None,
         post_script: Optional[str] = None,
         return_steam_cmd: bool = False,
         return_clean_cmd: bool = False,
@@ -587,6 +589,9 @@ class WineCommand:
 
         if post_script is not None:
             command = f"{command} ; sh '{post_script}'"
+
+        if pre_script is not None:
+            command = f"sh '{pre_script}' ; {command}"
 
         return command
 
